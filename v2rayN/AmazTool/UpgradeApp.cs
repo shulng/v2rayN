@@ -1,40 +1,32 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
+using System.Runtime.InteropServices;
 using System.Text;
 
-namespace v2rayUpgrade
+namespace AmazTool
 {
-    internal static class Program
+    internal class UpgradeApp
     {
-        private static readonly string defaultFilename = "v2rayN.zip_temp";
-        private static string? fileName;
-
-        /// <summary>
-        /// 应用程序的主入口点。
-        /// </summary>
-        [STAThread]
-        private static void Main(string[] args)
+        public static void Upgrade(string fileName)
         {
-            if (args.Length > 0)
-            {
-                fileName = Uri.UnescapeDataString(string.Join(" ", args));
-            }
-            else
-            {
-                fileName = defaultFilename;
-            }
             Console.WriteLine(fileName);
             Console.WriteLine("In progress, please wait...(正在进行中，请等待)");
 
-            Thread.Sleep(10000);
+            Thread.Sleep(5000);
+
+            if (!File.Exists(fileName))
+            {
+                Console.WriteLine("Upgrade Failed, File Not Exist(升级失败,文件不存在).");
+                return;
+            }
 
             try
             {
-                Process[] existing = Process.GetProcessesByName("v2rayN");
+                Process[] existing = Process.GetProcessesByName(V2rayN());
                 foreach (Process p in existing)
                 {
                     var path = p.MainModule?.FileName ?? "";
-                    if (path.StartsWith(GetPath("v2rayN")))
+                    if (path.StartsWith(GetPath(V2rayN())))
                     {
                         p.Kill();
                         p.WaitForExit(100);
@@ -46,19 +38,6 @@ namespace v2rayUpgrade
                 // Access may be denied without admin right. The user may not be an administrator.
                 Console.WriteLine("Failed to close v2rayN(关闭v2rayN失败).\n" +
                     "Close it manually, or the upgrade may fail.(请手动关闭正在运行的v2rayN，否则可能升级失败。\n\n" + ex.StackTrace);
-            }
-
-            if (!File.Exists(fileName))
-            {
-                if (File.Exists(defaultFilename))
-                {
-                    fileName = defaultFilename;
-                }
-                else
-                {
-                    Console.WriteLine("Upgrade Failed, File Not Exist(升级失败,文件不存在).");
-                    return;
-                }
             }
 
             StringBuilder sb = new();
@@ -112,20 +91,29 @@ namespace v2rayUpgrade
             }
 
             Console.WriteLine("Start v2rayN, please wait...(正在重启，请等待)");
-            Process.Start("v2rayN");
+            Thread.Sleep(3000);
+            Process process = new()
+            {
+                StartInfo = new()
+                {
+                    FileName = V2rayN(),
+                    WorkingDirectory = StartupPath()
+                }
+            };
+            process.Start();
         }
 
-        public static string GetExePath()
+        private static string GetExePath()
         {
-            return Environment.ProcessPath ?? string.Empty;
+            return Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
         }
 
-        public static string StartupPath()
+        private static string StartupPath()
         {
             return AppDomain.CurrentDomain.BaseDirectory;
         }
 
-        public static string GetPath(string fileName)
+        private static string GetPath(string fileName)
         {
             string startupPath = StartupPath();
             if (string.IsNullOrEmpty(fileName))
@@ -133,6 +121,21 @@ namespace v2rayUpgrade
                 return startupPath;
             }
             return Path.Combine(startupPath, fileName);
+        }
+
+        private static string V2rayN()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                if (File.Exists(GetPath("v2rayN.exe")))
+                    return "v2rayN";
+                else
+                    return "v2rayN.Desktop";
+            }
+            else
+            {
+                return "v2rayN.Desktop";
+            }
         }
     }
 }

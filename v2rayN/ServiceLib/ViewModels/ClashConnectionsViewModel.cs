@@ -30,7 +30,7 @@ namespace ServiceLib.ViewModels
 
         public ClashConnectionsViewModel(Func<EViewAction, object?, Task<bool>>? updateView)
         {
-            _config = LazyConfig.Instance.Config;
+            _config = AppHandler.Instance.Config;
             _updateView = updateView;
             SortingSelected = _config.clashUIItem.connectionsSorting;
             AutoRefresh = _config.clashUIItem.connectionsAutoRefresh;
@@ -49,14 +49,14 @@ namespace ServiceLib.ViewModels
                y => y == true)
                    .Subscribe(c => { _config.clashUIItem.connectionsAutoRefresh = AutoRefresh; });
 
-            ConnectionCloseCmd = ReactiveCommand.Create(() =>
+            ConnectionCloseCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ClashConnectionClose(false);
+                await ClashConnectionClose(false);
             }, canEditRemove);
 
-            ConnectionCloseAllCmd = ReactiveCommand.Create(() =>
+            ConnectionCloseAllCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ClashConnectionClose(true);
+                await ClashConnectionClose(true);
             });
 
             Init();
@@ -83,7 +83,7 @@ namespace ServiceLib.ViewModels
             Observable.Interval(TimeSpan.FromSeconds(5))
               .Subscribe(x =>
               {
-                  if (!(AutoRefresh && _config.uiItem.showInTaskbar && _config.IsRunningCore(ECoreType.clash)))
+                  if (!(AutoRefresh && _config.uiItem.showInTaskbar && _config.IsRunningCore(ECoreType.sing_box)))
                   {
                       return;
                   }
@@ -109,7 +109,7 @@ namespace ServiceLib.ViewModels
                     return;
                 }
 
-                await _updateView?.Invoke(EViewAction.DispatcherRefreshConnections, it?.connections);
+                _updateView?.Invoke(EViewAction.DispatcherRefreshConnections, it?.connections);
             });
         }
 
@@ -177,7 +177,7 @@ namespace ServiceLib.ViewModels
             _connectionItems.AddRange(lstModel);
         }
 
-        public void ClashConnectionClose(bool all)
+        public async Task ClashConnectionClose(bool all)
         {
             var id = string.Empty;
             if (!all)

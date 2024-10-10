@@ -2,23 +2,22 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace ServiceLib.Handler
+namespace ServiceLib.Services
 {
-    public class SpeedtestHandler
+    public class SpeedtestService
     {
         private Config? _config;
-        private CoreHandler _coreHandler;
         private List<ServerTestItem> _selecteds;
         private ESpeedActionType _actionType;
-        private Action<SpeedTestResult> _updateFunc;
+        private Action<SpeedTestResult>? _updateFunc;
         private bool _exitLoop = false;
 
-        public SpeedtestHandler(Config config, CoreHandler coreHandler, List<ProfileItem> selecteds, ESpeedActionType actionType, Action<SpeedTestResult> update)
+        public SpeedtestService(Config config, List<ProfileItem> selecteds, ESpeedActionType actionType, Action<SpeedTestResult> updateFunc)
         {
             _config = config;
-            _coreHandler = coreHandler;
+
             _actionType = actionType;
-            _updateFunc = update;
+            _updateFunc = updateFunc;
 
             _selecteds = new List<ServerTestItem>();
             foreach (var it in selecteds)
@@ -33,10 +32,10 @@ namespace ServiceLib.Handler
                 }
                 _selecteds.Add(new ServerTestItem()
                 {
-                    indexId = it.indexId,
-                    address = it.address,
-                    port = it.port,
-                    configType = it.configType
+                    IndexId = it.indexId,
+                    Address = it.address,
+                    Port = it.port,
+                    ConfigType = it.configType
                 });
             }
             //clear test result
@@ -46,19 +45,19 @@ namespace ServiceLib.Handler
                 {
                     case ESpeedActionType.Tcping:
                     case ESpeedActionType.Realping:
-                        UpdateFunc(it.indexId, ResUI.Speedtesting, "");
-                        ProfileExHandler.Instance.SetTestDelay(it.indexId, "0");
+                        UpdateFunc(it.IndexId, ResUI.Speedtesting, "");
+                        ProfileExHandler.Instance.SetTestDelay(it.IndexId, "0");
                         break;
 
                     case ESpeedActionType.Speedtest:
-                        UpdateFunc(it.indexId, "", ResUI.SpeedtestingWait);
-                        ProfileExHandler.Instance.SetTestSpeed(it.indexId, "0");
+                        UpdateFunc(it.IndexId, "", ResUI.SpeedtestingWait);
+                        ProfileExHandler.Instance.SetTestSpeed(it.IndexId, "0");
                         break;
 
                     case ESpeedActionType.Mixedtest:
-                        UpdateFunc(it.indexId, ResUI.Speedtesting, ResUI.SpeedtestingWait);
-                        ProfileExHandler.Instance.SetTestDelay(it.indexId, "0");
-                        ProfileExHandler.Instance.SetTestSpeed(it.indexId, "0");
+                        UpdateFunc(it.IndexId, ResUI.Speedtesting, ResUI.SpeedtestingWait);
+                        ProfileExHandler.Instance.SetTestDelay(it.IndexId, "0");
+                        ProfileExHandler.Instance.SetTestSpeed(it.IndexId, "0");
                         break;
                 }
             }
@@ -96,7 +95,7 @@ namespace ServiceLib.Handler
                 List<Task> tasks = [];
                 foreach (var it in _selecteds)
                 {
-                    if (it.configType == EConfigType.Custom)
+                    if (it.ConfigType == EConfigType.Custom)
                     {
                         continue;
                     }
@@ -104,11 +103,11 @@ namespace ServiceLib.Handler
                     {
                         try
                         {
-                            int time = GetTcpingTime(it.address, it.port);
+                            int time = GetTcpingTime(it.Address, it.Port);
                             var output = FormatOut(time, Global.DelayUnit);
 
-                            ProfileExHandler.Instance.SetTestDelay(it.indexId, output);
-                            UpdateFunc(it.indexId, output);
+                            ProfileExHandler.Instance.SetTestDelay(it.IndexId, output);
+                            UpdateFunc(it.IndexId, output);
                         }
                         catch (Exception ex)
                         {
@@ -137,23 +136,23 @@ namespace ServiceLib.Handler
             {
                 string msg = string.Empty;
 
-                pid = _coreHandler.LoadCoreConfigSpeedtest(_selecteds);
+                pid = CoreHandler.Instance.LoadCoreConfigSpeedtest(_selecteds);
                 if (pid < 0)
                 {
                     UpdateFunc("", ResUI.FailedToRunCore);
                     return Task.CompletedTask;
                 }
 
-                DownloadHandler downloadHandle = new DownloadHandler();
+                DownloadService downloadHandle = new DownloadService();
 
                 List<Task> tasks = new();
                 foreach (var it in _selecteds)
                 {
-                    if (!it.allowTest)
+                    if (!it.AllowTest)
                     {
                         continue;
                     }
-                    if (it.configType == EConfigType.Custom)
+                    if (it.ConfigType == EConfigType.Custom)
                     {
                         continue;
                     }
@@ -161,13 +160,13 @@ namespace ServiceLib.Handler
                     {
                         try
                         {
-                            WebProxy webProxy = new(Global.Loopback, it.port);
+                            WebProxy webProxy = new(Global.Loopback, it.Port);
                             string output = await GetRealPingTime(downloadHandle, webProxy);
 
-                            ProfileExHandler.Instance.SetTestDelay(it.indexId, output);
-                            UpdateFunc(it.indexId, output);
+                            ProfileExHandler.Instance.SetTestDelay(it.IndexId, output);
+                            UpdateFunc(it.IndexId, output);
                             int.TryParse(output, out int delay);
-                            it.delay = delay;
+                            it.Delay = delay;
                         }
                         catch (Exception ex)
                         {
@@ -185,7 +184,7 @@ namespace ServiceLib.Handler
             {
                 if (pid > 0)
                 {
-                    _coreHandler.CoreStopPid(pid);
+                    CoreHandler.Instance.CoreStopPid(pid);
                 }
                 ProfileExHandler.Instance.SaveTo();
             }
@@ -201,7 +200,7 @@ namespace ServiceLib.Handler
             //    _selecteds = _selecteds.OrderBy(t => t.delay).ToList();
             //}
 
-            pid = _coreHandler.LoadCoreConfigSpeedtest(_selecteds);
+            pid = CoreHandler.Instance.LoadCoreConfigSpeedtest(_selecteds);
             if (pid < 0)
             {
                 UpdateFunc("", ResUI.FailedToRunCore);
@@ -211,20 +210,20 @@ namespace ServiceLib.Handler
             string url = _config.speedTestItem.speedTestUrl;
             var timeout = _config.speedTestItem.speedTestTimeout;
 
-            DownloadHandler downloadHandle = new();
+            DownloadService downloadHandle = new();
 
             foreach (var it in _selecteds)
             {
                 if (_exitLoop)
                 {
-                    UpdateFunc(it.indexId, "", ResUI.SpeedtestingSkip);
+                    UpdateFunc(it.IndexId, "", ResUI.SpeedtestingSkip);
                     continue;
                 }
-                if (!it.allowTest)
+                if (!it.AllowTest)
                 {
                     continue;
                 }
-                if (it.configType == EConfigType.Custom)
+                if (it.ConfigType == EConfigType.Custom)
                 {
                     continue;
                 }
@@ -233,28 +232,28 @@ namespace ServiceLib.Handler
                 //    UpdateFunc(it.indexId, "", ResUI.SpeedtestingSkip);
                 //    continue;
                 //}
-                ProfileExHandler.Instance.SetTestSpeed(it.indexId, "-1");
-                UpdateFunc(it.indexId, "", ResUI.Speedtesting);
+                ProfileExHandler.Instance.SetTestSpeed(it.IndexId, "-1");
+                UpdateFunc(it.IndexId, "", ResUI.Speedtesting);
 
-                var item = LazyConfig.Instance.GetProfileItem(it.indexId);
+                var item = AppHandler.Instance.GetProfileItem(it.IndexId);
                 if (item is null) continue;
 
-                WebProxy webProxy = new(Global.Loopback, it.port);
+                WebProxy webProxy = new(Global.Loopback, it.Port);
 
-                await downloadHandle.DownloadDataAsync(url, webProxy, timeout, (bool success, string msg) =>
+                await downloadHandle.DownloadDataAsync(url, webProxy, timeout, (success, msg) =>
                 {
                     decimal.TryParse(msg, out decimal dec);
                     if (dec > 0)
                     {
-                        ProfileExHandler.Instance.SetTestSpeed(it.indexId, msg);
+                        ProfileExHandler.Instance.SetTestSpeed(it.IndexId, msg);
                     }
-                    UpdateFunc(it.indexId, "", msg);
+                    UpdateFunc(it.IndexId, "", msg);
                 });
             }
 
             if (pid > 0)
             {
-                _coreHandler.CoreStopPid(pid);
+                CoreHandler.Instance.CoreStopPid(pid);
             }
             UpdateFunc("", ResUI.SpeedtestingCompleted);
             ProfileExHandler.Instance.SaveTo();
@@ -263,7 +262,7 @@ namespace ServiceLib.Handler
         private async Task RunSpeedTestMulti()
         {
             int pid = -1;
-            pid = _coreHandler.LoadCoreConfigSpeedtest(_selecteds);
+            pid = CoreHandler.Instance.LoadCoreConfigSpeedtest(_selecteds);
             if (pid < 0)
             {
                 UpdateFunc("", ResUI.FailedToRunCore);
@@ -273,44 +272,44 @@ namespace ServiceLib.Handler
             string url = _config.speedTestItem.speedTestUrl;
             var timeout = _config.speedTestItem.speedTestTimeout;
 
-            DownloadHandler downloadHandle = new();
+            DownloadService downloadHandle = new();
 
             foreach (var it in _selecteds)
             {
                 if (_exitLoop)
                 {
-                    UpdateFunc(it.indexId, "", ResUI.SpeedtestingSkip);
+                    UpdateFunc(it.IndexId, "", ResUI.SpeedtestingSkip);
                     continue;
                 }
 
-                if (!it.allowTest)
+                if (!it.AllowTest)
                 {
                     continue;
                 }
-                if (it.configType == EConfigType.Custom)
+                if (it.ConfigType == EConfigType.Custom)
                 {
                     continue;
                 }
-                if (it.delay < 0)
+                if (it.Delay < 0)
                 {
-                    UpdateFunc(it.indexId, "", ResUI.SpeedtestingSkip);
+                    UpdateFunc(it.IndexId, "", ResUI.SpeedtestingSkip);
                     continue;
                 }
-                ProfileExHandler.Instance.SetTestSpeed(it.indexId, "-1");
-                UpdateFunc(it.indexId, "", ResUI.Speedtesting);
+                ProfileExHandler.Instance.SetTestSpeed(it.IndexId, "-1");
+                UpdateFunc(it.IndexId, "", ResUI.Speedtesting);
 
-                var item = LazyConfig.Instance.GetProfileItem(it.indexId);
+                var item = AppHandler.Instance.GetProfileItem(it.IndexId);
                 if (item is null) continue;
 
-                WebProxy webProxy = new(Global.Loopback, it.port);
-                _ = downloadHandle.DownloadDataAsync(url, webProxy, timeout, (bool success, string msg) =>
+                WebProxy webProxy = new(Global.Loopback, it.Port);
+                _ = downloadHandle.DownloadDataAsync(url, webProxy, timeout, (success, msg) =>
                 {
                     decimal.TryParse(msg, out decimal dec);
                     if (dec > 0)
                     {
-                        ProfileExHandler.Instance.SetTestSpeed(it.indexId, msg);
+                        ProfileExHandler.Instance.SetTestSpeed(it.IndexId, msg);
                     }
-                    UpdateFunc(it.indexId, "", msg);
+                    UpdateFunc(it.IndexId, "", msg);
                 });
                 await Task.Delay(2000);
             }
@@ -319,7 +318,7 @@ namespace ServiceLib.Handler
 
             if (pid > 0)
             {
-                _coreHandler.CoreStopPid(pid);
+                CoreHandler.Instance.CoreStopPid(pid);
             }
             UpdateFunc("", ResUI.SpeedtestingCompleted);
             ProfileExHandler.Instance.SaveTo();
@@ -334,7 +333,7 @@ namespace ServiceLib.Handler
             await RunSpeedTestMulti();
         }
 
-        private async Task<string> GetRealPingTime(DownloadHandler downloadHandle, IWebProxy webProxy)
+        private async Task<string> GetRealPingTime(DownloadService downloadHandle, IWebProxy webProxy)
         {
             int responseTime = await downloadHandle.GetRealPingTime(_config.speedTestItem.speedPingTestUrl, webProxy, 10);
             //string output = Utile.IsNullOrEmpty(status) ? FormatOut(responseTime, "ms") : status;
@@ -349,7 +348,7 @@ namespace ServiceLib.Handler
             {
                 if (!IPAddress.TryParse(url, out IPAddress? ipAddress))
                 {
-                    IPHostEntry ipHostInfo = System.Net.Dns.GetHostEntry(url);
+                    IPHostEntry ipHostInfo = Dns.GetHostEntry(url);
                     ipAddress = ipHostInfo.AddressList[0];
                 }
 
@@ -384,7 +383,7 @@ namespace ServiceLib.Handler
 
         private void UpdateFunc(string indexId, string delay, string speed = "")
         {
-            _updateFunc(new() { IndexId = indexId, Delay = delay, Speed = speed });
+            _updateFunc?.Invoke(new() { IndexId = indexId, Delay = delay, Speed = speed });
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using DynamicData.Binding;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
-using Splat;
 using System.Reactive;
 
 namespace ServiceLib.ViewModels
@@ -67,8 +66,8 @@ namespace ServiceLib.ViewModels
 
         public RoutingSettingViewModel(Func<EViewAction, object?, Task<bool>>? updateView)
         {
-            _config = LazyConfig.Instance.Config;
-            _noticeHandler = Locator.Current.GetService<NoticeHandler>();
+            _config = AppHandler.Instance.Config;
+
             _updateView = updateView;
             SelectedSource = new();
 
@@ -91,31 +90,31 @@ namespace ServiceLib.ViewModels
                 x => x.enableRoutingAdvanced)
                 .Subscribe(c => enableRoutingBasic = !enableRoutingAdvanced);
 
-            RoutingBasicImportRulesCmd = ReactiveCommand.Create(() =>
+            RoutingBasicImportRulesCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RoutingBasicImportRules();
+                await RoutingBasicImportRules();
             });
 
-            RoutingAdvancedAddCmd = ReactiveCommand.Create(() =>
+            RoutingAdvancedAddCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RoutingAdvancedEditAsync(true);
+                await RoutingAdvancedEditAsync(true);
             });
-            RoutingAdvancedRemoveCmd = ReactiveCommand.Create(() =>
+            RoutingAdvancedRemoveCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RoutingAdvancedRemoveAsync();
+                await RoutingAdvancedRemoveAsync();
             }, canEditRemove);
-            RoutingAdvancedSetDefaultCmd = ReactiveCommand.Create(() =>
+            RoutingAdvancedSetDefaultCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RoutingAdvancedSetDefault();
+                await RoutingAdvancedSetDefault();
             }, canEditRemove);
-            RoutingAdvancedImportRulesCmd = ReactiveCommand.Create(() =>
+            RoutingAdvancedImportRulesCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RoutingAdvancedImportRules();
+                await RoutingAdvancedImportRules();
             });
 
-            SaveCmd = ReactiveCommand.Create(() =>
+            SaveCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SaveRoutingAsync();
+                await SaveRoutingAsync();
             });
         }
 
@@ -165,7 +164,7 @@ namespace ServiceLib.ViewModels
         {
             _routingItems.Clear();
 
-            var routings = LazyConfig.Instance.RoutingItems();
+            var routings = AppHandler.Instance.RoutingItems();
             foreach (var item in routings)
             {
                 bool def = false;
@@ -200,18 +199,18 @@ namespace ServiceLib.ViewModels
 
             if (ConfigHandler.SaveConfig(_config) == 0)
             {
-                _noticeHandler?.Enqueue(ResUI.OperationSuccess);
-                await _updateView?.Invoke(EViewAction.CloseWindow, null);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
+                _updateView?.Invoke(EViewAction.CloseWindow, null);
             }
             else
             {
-                _noticeHandler?.Enqueue(ResUI.OperationFailed);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationFailed);
             }
         }
 
         #endregion Refresh Save
 
-        private void RoutingBasicImportRules()
+        private async Task RoutingBasicImportRules()
         {
             //Extra to bypass the mainland
             ProxyDomain = "geosite:google";
@@ -219,8 +218,8 @@ namespace ServiceLib.ViewModels
             DirectIP = "geoip:private,geoip:cn";
             BlockDomain = "geosite:category-ads-all";
 
-            //_noticeHandler?.Enqueue(ResUI.OperationSuccess);
-            _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+            //NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
+            NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
         }
 
         public async Task RoutingAdvancedEditAsync(bool blNew)
@@ -232,7 +231,7 @@ namespace ServiceLib.ViewModels
             }
             else
             {
-                item = LazyConfig.Instance.GetRoutingItem(SelectedSource?.id);
+                item = AppHandler.Instance.GetRoutingItem(SelectedSource?.id);
                 if (item is null)
                 {
                     return;
@@ -249,7 +248,7 @@ namespace ServiceLib.ViewModels
         {
             if (SelectedSource is null || SelectedSource.remarks.IsNullOrEmpty())
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectRules);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectRules);
                 return;
             }
             if (await _updateView?.Invoke(EViewAction.ShowYesNo, null) == false)
@@ -258,7 +257,7 @@ namespace ServiceLib.ViewModels
             }
             foreach (var it in SelectedSources ?? [SelectedSource])
             {
-                var item = LazyConfig.Instance.GetRoutingItem(it?.id);
+                var item = AppHandler.Instance.GetRoutingItem(it?.id);
                 if (item != null)
                 {
                     ConfigHandler.RemoveRoutingItem(item);
@@ -269,12 +268,12 @@ namespace ServiceLib.ViewModels
             IsModified = true;
         }
 
-        public void RoutingAdvancedSetDefault()
+        public async Task RoutingAdvancedSetDefault()
         {
-            var item = LazyConfig.Instance.GetRoutingItem(SelectedSource?.id);
+            var item = AppHandler.Instance.GetRoutingItem(SelectedSource?.id);
             if (item is null)
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectRules);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectRules);
                 return;
             }
 
@@ -285,7 +284,7 @@ namespace ServiceLib.ViewModels
             }
         }
 
-        private void RoutingAdvancedImportRules()
+        private async Task RoutingAdvancedImportRules()
         {
             if (ConfigHandler.InitBuiltinRouting(_config, true) == 0)
             {

@@ -1,7 +1,6 @@
 ﻿using DynamicData.Binding;
 using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
-using Splat;
 using System.Reactive;
 
 namespace ServiceLib.ViewModels
@@ -36,8 +35,8 @@ namespace ServiceLib.ViewModels
 
         public RoutingRuleSettingViewModel(RoutingItem routingItem, Func<EViewAction, object?, Task<bool>>? updateView)
         {
-            _config = LazyConfig.Instance.Config;
-            _noticeHandler = Locator.Current.GetService<NoticeHandler>();
+            _config = AppHandler.Instance.Config;
+
             _updateView = updateView;
             SelectedSource = new();
 
@@ -58,52 +57,52 @@ namespace ServiceLib.ViewModels
                x => x.SelectedSource,
                selectedSource => selectedSource != null && !selectedSource.outboundTag.IsNullOrEmpty());
 
-            RuleAddCmd = ReactiveCommand.Create(() =>
+            RuleAddCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RuleEditAsync(true);
+                await RuleEditAsync(true);
             });
             ImportRulesFromFileCmd = ReactiveCommand.CreateFromTask(async () =>
             {
                 await _updateView?.Invoke(EViewAction.ImportRulesFromFile, null);
             });
-            ImportRulesFromClipboardCmd = ReactiveCommand.Create(() =>
+            ImportRulesFromClipboardCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ImportRulesFromClipboardAsync(null);
+                await ImportRulesFromClipboardAsync(null);
             });
-            ImportRulesFromUrlCmd = ReactiveCommand.Create(() =>
+            ImportRulesFromUrlCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ImportRulesFromUrl();
+                await ImportRulesFromUrl();
             });
 
-            RuleRemoveCmd = ReactiveCommand.Create(() =>
+            RuleRemoveCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RuleRemoveAsync();
+                await RuleRemoveAsync();
             }, canEditRemove);
-            RuleExportSelectedCmd = ReactiveCommand.Create(() =>
+            RuleExportSelectedCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RuleExportSelectedAsync();
-            }, canEditRemove);
-
-            MoveTopCmd = ReactiveCommand.Create(() =>
-            {
-                MoveRule(EMove.Top);
-            }, canEditRemove);
-            MoveUpCmd = ReactiveCommand.Create(() =>
-            {
-                MoveRule(EMove.Up);
-            }, canEditRemove);
-            MoveDownCmd = ReactiveCommand.Create(() =>
-            {
-                MoveRule(EMove.Down);
-            }, canEditRemove);
-            MoveBottomCmd = ReactiveCommand.Create(() =>
-            {
-                MoveRule(EMove.Bottom);
+                await RuleExportSelectedAsync();
             }, canEditRemove);
 
-            SaveCmd = ReactiveCommand.Create(() =>
+            MoveTopCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SaveRoutingAsync();
+                await MoveRule(EMove.Top);
+            }, canEditRemove);
+            MoveUpCmd = ReactiveCommand.CreateFromTask(async () =>
+            {
+                await MoveRule(EMove.Up);
+            }, canEditRemove);
+            MoveDownCmd = ReactiveCommand.CreateFromTask(async () =>
+            {
+                await MoveRule(EMove.Down);
+            }, canEditRemove);
+            MoveBottomCmd = ReactiveCommand.CreateFromTask(async () =>
+            {
+                await MoveRule(EMove.Bottom);
+            }, canEditRemove);
+
+            SaveCmd = ReactiveCommand.CreateFromTask(async () =>
+            {
+                await SaveRoutingAsync();
             });
         }
 
@@ -159,7 +158,7 @@ namespace ServiceLib.ViewModels
         {
             if (SelectedSource is null || SelectedSource.outboundTag.IsNullOrEmpty())
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectRules);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectRules);
                 return;
             }
             if (await _updateView?.Invoke(EViewAction.ShowYesNo, null) == false)
@@ -182,7 +181,7 @@ namespace ServiceLib.ViewModels
         {
             if (SelectedSource is null || SelectedSource.outboundTag.IsNullOrEmpty())
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectRules);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectRules);
                 return;
             }
 
@@ -202,11 +201,11 @@ namespace ServiceLib.ViewModels
             }
         }
 
-        public void MoveRule(EMove eMove)
+        public async Task MoveRule(EMove eMove)
         {
             if (SelectedSource is null || SelectedSource.outboundTag.IsNullOrEmpty())
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectRules);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectRules);
                 return;
             }
 
@@ -227,7 +226,7 @@ namespace ServiceLib.ViewModels
             string remarks = SelectedRouting.remarks;
             if (Utils.IsNullOrEmpty(remarks))
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseFillRemarks);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseFillRemarks);
                 return;
             }
             var item = SelectedRouting;
@@ -240,12 +239,12 @@ namespace ServiceLib.ViewModels
 
             if (ConfigHandler.SaveRoutingItem(_config, item) == 0)
             {
-                _noticeHandler?.Enqueue(ResUI.OperationSuccess);
-                await _updateView?.Invoke(EViewAction.CloseWindow, null);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
+                _updateView?.Invoke(EViewAction.CloseWindow, null);
             }
             else
             {
-                _noticeHandler?.Enqueue(ResUI.OperationFailed);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationFailed);
             }
         }
 
@@ -267,7 +266,7 @@ namespace ServiceLib.ViewModels
             if (ret == 0)
             {
                 RefreshRulesItems();
-                _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
             }
         }
 
@@ -282,26 +281,26 @@ namespace ServiceLib.ViewModels
             if (ret == 0)
             {
                 RefreshRulesItems();
-                _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
             }
         }
 
-        private async void ImportRulesFromUrl()
+        private async Task ImportRulesFromUrl()
         {
             var url = SelectedRouting.url;
             if (Utils.IsNullOrEmpty(url))
             {
-                _noticeHandler?.Enqueue(ResUI.MsgNeedUrl);
+                NoticeHandler.Instance.Enqueue(ResUI.MsgNeedUrl);
                 return;
             }
 
-            DownloadHandler downloadHandle = new DownloadHandler();
+            DownloadService downloadHandle = new DownloadService();
             var result = await downloadHandle.TryDownloadString(url, true, "");
             var ret = await AddBatchRoutingRulesAsync(SelectedRouting, result);
             if (ret == 0)
             {
                 RefreshRulesItems();
-                _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
             }
         }
 

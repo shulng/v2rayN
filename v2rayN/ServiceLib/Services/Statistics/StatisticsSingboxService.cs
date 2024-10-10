@@ -1,20 +1,20 @@
 ﻿using System.Net.WebSockets;
 using System.Text;
 
-namespace ServiceLib.Handler.Statistics
+namespace ServiceLib.Services.Statistics
 {
-    public class StatisticsSingbox
+    public class StatisticsSingboxService
     {
         private Config _config;
         private bool _exitFlag;
         private ClientWebSocket? webSocket;
         private string url = string.Empty;
-        private Action<ServerSpeedItem> _updateFunc;
+        private Action<ServerSpeedItem>? _updateFunc;
 
-        public StatisticsSingbox(Config config, Action<ServerSpeedItem> update)
+        public StatisticsSingboxService(Config config, Action<ServerSpeedItem> updateFunc)
         {
             _config = config;
-            _updateFunc = update;
+            _updateFunc = updateFunc;
             _exitFlag = false;
 
             Task.Run(() => Run());
@@ -26,7 +26,7 @@ namespace ServiceLib.Handler.Statistics
 
             try
             {
-                url = $"ws://{Global.Loopback}:{LazyConfig.Instance.StatePort2}/traffic";
+                url = $"ws://{Global.Loopback}:{AppHandler.Instance.StatePort2}/traffic";
 
                 if (webSocket == null)
                 {
@@ -63,7 +63,7 @@ namespace ServiceLib.Handler.Statistics
                 await Task.Delay(1000);
                 try
                 {
-                    if (!(_config.IsRunningCore(ECoreType.clash)))
+                    if (!_config.IsRunningCore(ECoreType.sing_box))
                     {
                         continue;
                     }
@@ -92,7 +92,7 @@ namespace ServiceLib.Handler.Statistics
                             {
                                 ParseOutput(result, out ulong up, out ulong down);
 
-                                _updateFunc(new ServerSpeedItem()
+                                _updateFunc?.Invoke(new ServerSpeedItem()
                                 {
                                     proxyUp = (long)(up / 1000),
                                     proxyDown = (long)(down / 1000)

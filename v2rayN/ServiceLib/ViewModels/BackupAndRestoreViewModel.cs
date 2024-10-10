@@ -22,9 +22,8 @@ namespace ServiceLib.ViewModels
 
         public BackupAndRestoreViewModel(Func<EViewAction, object?, Task<bool>>? updateView)
         {
-            _config = LazyConfig.Instance.Config;
+            _config = AppHandler.Instance.Config;
             _updateView = updateView;
-            _noticeHandler = Locator.Current.GetService<NoticeHandler>();
 
             WebDavCheckCmd = ReactiveCommand.CreateFromTask(async () =>
             {
@@ -138,7 +137,7 @@ namespace ServiceLib.ViewModels
             var result = await CreateZipFileFromDirectory(fileBackup);
             if (result)
             {
-                Locator.Current.GetService<MainWindowViewModel>()?.V2rayUpgrade(fileName);
+                Locator.Current.GetService<MainWindowViewModel>()?.UpgradeApp(fileName);
             }
             else
             {

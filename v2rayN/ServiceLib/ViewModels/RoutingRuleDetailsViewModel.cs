@@ -1,6 +1,5 @@
 ﻿using ReactiveUI;
 using ReactiveUI.Fody.Helpers;
-using Splat;
 using System.Reactive;
 
 namespace ServiceLib.ViewModels
@@ -29,8 +28,8 @@ namespace ServiceLib.ViewModels
 
         public RoutingRuleDetailsViewModel(RulesItem rulesItem, Func<EViewAction, object?, Task<bool>>? updateView)
         {
-            _config = LazyConfig.Instance.Config;
-            _noticeHandler = Locator.Current.GetService<NoticeHandler>();
+            _config = AppHandler.Instance.Config;
+
             _updateView = updateView;
 
             if (rulesItem.id.IsNullOrEmpty())
@@ -49,9 +48,9 @@ namespace ServiceLib.ViewModels
             IP = Utils.List2String(SelectedSource.ip, true);
             Process = Utils.List2String(SelectedSource.process, true);
 
-            SaveCmd = ReactiveCommand.Create(() =>
+            SaveCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SaveRulesAsync();
+                await SaveRulesAsync();
             });
         }
 
@@ -84,11 +83,11 @@ namespace ServiceLib.ViewModels
 
             if (!hasRule)
             {
-                _noticeHandler?.Enqueue(string.Format(ResUI.RoutingRuleDetailRequiredTips, "Port/Protocol/Domain/IP/Process"));
+                NoticeHandler.Instance.Enqueue(string.Format(ResUI.RoutingRuleDetailRequiredTips, "Port/Protocol/Domain/IP/Process"));
                 return;
             }
-            //_noticeHandler?.Enqueue(ResUI.OperationSuccess);
-            await _updateView?.Invoke(EViewAction.CloseWindow, null);
+            //NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
+            _updateView?.Invoke(EViewAction.CloseWindow, null);
         }
     }
 }

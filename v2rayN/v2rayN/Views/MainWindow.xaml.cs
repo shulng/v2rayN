@@ -23,7 +23,7 @@ namespace v2rayN.Views
         {
             InitializeComponent();
 
-            _config = LazyConfig.Instance.Config;
+            _config = AppHandler.Instance.Config;
             ThreadPool.RegisterWaitForSingleObject(App.ProgramStarted, OnProgramStarted, null, -1, false);
 
             App.Current.SessionEnding += Current_SessionEnding;
@@ -36,7 +36,7 @@ namespace v2rayN.Views
             menuCheckUpdate.Click += MenuCheckUpdate_Click;
             menuBackupAndRestore.Click += MenuBackupAndRestore_Click;
 
-            var IsAdministrator = WindowsUtils.IsAdministrator();
+            var IsAdministrator = Utils.IsAdministrator();
             MessageBus.Current.Listen<string>(Global.CommandSendSnackMsg).Subscribe(x => DelegateSnackMsg(x));
             ViewModel = new MainWindowViewModel(IsAdministrator, UpdateViewHandler);
             Locator.CurrentMutable.RegisterLazySingleton(() => ViewModel, typeof(MainWindowViewModel));
@@ -172,7 +172,7 @@ namespace v2rayN.Views
             {
                 RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
             }
-            
+
             RestoreUI();
             AddHelpMenuItem();
         }
@@ -492,16 +492,13 @@ namespace v2rayN.Views
         {
             var coreInfo = CoreInfoHandler.Instance.GetCoreInfo();
             foreach (var it in coreInfo
-                .Where(t => t.coreType != ECoreType.v2fly 
-                            && t.coreType != ECoreType.SagerNet
-                            && t.coreType != ECoreType.clash
-                            && t.coreType != ECoreType.clash_meta
-                            && t.coreType != ECoreType.hysteria))
+                .Where(t => t.CoreType != ECoreType.v2fly
+                            && t.CoreType != ECoreType.hysteria))
             {
                 var item = new MenuItem()
                 {
-                    Tag = it.coreUrl.Replace(@"/releases", ""),
-                    Header = string.Format(ResUI.menuWebsiteItem, it.coreType.ToString().Replace("_", " ")).UpperFirstChar()
+                    Tag = it.Url.Replace(@"/releases", ""),
+                    Header = string.Format(ResUI.menuWebsiteItem, it.CoreType.ToString().Replace("_", " ")).UpperFirstChar()
                 };
                 item.Click += MenuItem_Click;
                 menuHelp.Items.Add(item);

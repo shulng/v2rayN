@@ -17,7 +17,7 @@ namespace ServiceLib.ViewModels
         private string _serverFilter = string.Empty;
 
         private Dictionary<string, bool> _dicHeaderSort = new();
-        private SpeedtestHandler? _speedtestHandler;
+        private SpeedtestService? _speedtestHandler;
 
         #endregion private prop
 
@@ -97,8 +97,8 @@ namespace ServiceLib.ViewModels
 
         public ProfilesViewModel(Func<EViewAction, object?, Task<bool>>? updateView)
         {
-            _config = LazyConfig.Instance.Config;
-            _noticeHandler = Locator.Current.GetService<NoticeHandler>();
+            _config = AppHandler.Instance.Config;
+
             _updateView = updateView;
 
             MessageBus.Current.Listen<string>(Global.CommandRefreshProfiles).Subscribe(async x => await _updateView?.Invoke(EViewAction.DispatcherRefreshServersBiz, null));
@@ -137,104 +137,104 @@ namespace ServiceLib.ViewModels
                   .Subscribe(c => ServerFilterChanged(c));
 
             //servers delete
-            EditServerCmd = ReactiveCommand.Create(() =>
+            EditServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                EditServerAsync(EConfigType.Custom);
+                await EditServerAsync(EConfigType.Custom);
             }, canEditRemove);
-            RemoveServerCmd = ReactiveCommand.Create(() =>
+            RemoveServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RemoveServerAsync();
+                await RemoveServerAsync();
             }, canEditRemove);
-            RemoveDuplicateServerCmd = ReactiveCommand.Create(() =>
+            RemoveDuplicateServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                RemoveDuplicateServer();
+                await RemoveDuplicateServer();
             });
-            CopyServerCmd = ReactiveCommand.Create(() =>
+            CopyServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                CopyServer();
+                await CopyServer();
             }, canEditRemove);
-            SetDefaultServerCmd = ReactiveCommand.Create(() =>
+            SetDefaultServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SetDefaultServer();
+                await SetDefaultServer();
             }, canEditRemove);
-            ShareServerCmd = ReactiveCommand.Create(() =>
+            ShareServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ShareServerAsync();
+                await ShareServerAsync();
             }, canEditRemove);
-            SetDefaultMultipleServerCmd = ReactiveCommand.Create(() =>
+            SetDefaultMultipleServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SetDefaultMultipleServer(ECoreType.sing_box);
+                await SetDefaultMultipleServer(ECoreType.sing_box);
             }, canEditRemove);
-            SetDefaultLoadBalanceServerCmd = ReactiveCommand.Create(() =>
+            SetDefaultLoadBalanceServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SetDefaultMultipleServer(ECoreType.Xray);
+                await SetDefaultMultipleServer(ECoreType.Xray);
             }, canEditRemove);
 
             //servers move
-            MoveTopCmd = ReactiveCommand.Create(() =>
+            MoveTopCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                MoveServer(EMove.Top);
+                await MoveServer(EMove.Top);
             }, canEditRemove);
-            MoveUpCmd = ReactiveCommand.Create(() =>
+            MoveUpCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                MoveServer(EMove.Up);
+                await MoveServer(EMove.Up);
             }, canEditRemove);
-            MoveDownCmd = ReactiveCommand.Create(() =>
+            MoveDownCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                MoveServer(EMove.Down);
+                await MoveServer(EMove.Down);
             }, canEditRemove);
-            MoveBottomCmd = ReactiveCommand.Create(() =>
+            MoveBottomCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                MoveServer(EMove.Bottom);
+                await MoveServer(EMove.Bottom);
             }, canEditRemove);
 
             //servers ping
-            MixedTestServerCmd = ReactiveCommand.Create(() =>
+            MixedTestServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ServerSpeedtest(ESpeedActionType.Mixedtest);
+                await ServerSpeedtest(ESpeedActionType.Mixedtest);
             });
-            TcpingServerCmd = ReactiveCommand.Create(() =>
+            TcpingServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ServerSpeedtest(ESpeedActionType.Tcping);
+                await ServerSpeedtest(ESpeedActionType.Tcping);
             }, canEditRemove);
-            RealPingServerCmd = ReactiveCommand.Create(() =>
+            RealPingServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ServerSpeedtest(ESpeedActionType.Realping);
+                await ServerSpeedtest(ESpeedActionType.Realping);
             }, canEditRemove);
-            SpeedServerCmd = ReactiveCommand.Create(() =>
+            SpeedServerCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                ServerSpeedtest(ESpeedActionType.Speedtest);
+                await ServerSpeedtest(ESpeedActionType.Speedtest);
             }, canEditRemove);
-            SortServerResultCmd = ReactiveCommand.Create(() =>
+            SortServerResultCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                SortServer(EServerColName.delayVal.ToString());
+                await SortServer(EServerColName.delayVal.ToString());
             });
             //servers export
-            Export2ClientConfigCmd = ReactiveCommand.Create(() =>
+            Export2ClientConfigCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                Export2ClientConfigAsync(false);
+                await Export2ClientConfigAsync(false);
             }, canEditRemove);
-            Export2ClientConfigClipboardCmd = ReactiveCommand.Create(() =>
+            Export2ClientConfigClipboardCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                Export2ClientConfigAsync(true);
+                await Export2ClientConfigAsync(true);
             }, canEditRemove);
-            Export2ShareUrlCmd = ReactiveCommand.Create(() =>
+            Export2ShareUrlCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                Export2ShareUrlAsync(false);
+                await Export2ShareUrlAsync(false);
             }, canEditRemove);
-            Export2ShareUrlBase64Cmd = ReactiveCommand.Create(() =>
+            Export2ShareUrlBase64Cmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                Export2ShareUrlAsync(true);
+                await Export2ShareUrlAsync(true);
             }, canEditRemove);
 
             //Subscription
-            AddSubCmd = ReactiveCommand.Create(() =>
+            AddSubCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                EditSubAsync(true);
+                await EditSubAsync(true);
             });
-            EditSubCmd = ReactiveCommand.Create(() =>
+            EditSubCmd = ReactiveCommand.CreateFromTask(async () =>
             {
-                EditSubAsync(false);
+                await EditSubAsync(false);
             });
 
             #endregion WhenAnyValue && ReactiveCommand
@@ -258,8 +258,8 @@ namespace ServiceLib.ViewModels
         {
             if (Utils.IsNullOrEmpty(result.IndexId))
             {
-                _noticeHandler?.SendMessageEx(result.Delay);
-                _noticeHandler?.Enqueue(result.Delay);
+                NoticeHandler.Instance.SendMessageEx(result.Delay);
+                NoticeHandler.Instance.Enqueue(result.Delay);
                 return;
             }
             var item = _profileItems.Where(it => it.indexId == result.IndexId).FirstOrDefault();
@@ -350,7 +350,7 @@ namespace ServiceLib.ViewModels
 
         public void RefreshServersBiz()
         {
-            var lstModel = LazyConfig.Instance.ProfileItemsEx(_config.subIndexId, _serverFilter);
+            var lstModel = AppHandler.Instance.ProfileItemsEx(_config.subIndexId, _serverFilter);
             _lstProfile = JsonUtils.Deserialize<List<ProfileItem>>(JsonUtils.Serialize(lstModel)) ?? [];
 
             _profileItems.Clear();
@@ -374,7 +374,7 @@ namespace ServiceLib.ViewModels
             _subItems.Clear();
 
             _subItems.Add(new SubItem { remarks = ResUI.AllGroupServers });
-            foreach (var item in LazyConfig.Instance.SubItems().OrderBy(t => t.sort))
+            foreach (var item in AppHandler.Instance.SubItems().OrderBy(t => t.sort))
             {
                 _subItems.Add(item);
             }
@@ -405,7 +405,7 @@ namespace ServiceLib.ViewModels
             {
                 foreach (var profile in orderProfiles)
                 {
-                    var item = LazyConfig.Instance.GetProfileItem(profile.indexId);
+                    var item = AppHandler.Instance.GetProfileItem(profile.indexId);
                     if (item is not null)
                     {
                         lstSelecteds.Add(item);
@@ -426,10 +426,10 @@ namespace ServiceLib.ViewModels
             {
                 return;
             }
-            var item = LazyConfig.Instance.GetProfileItem(SelectedProfile.indexId);
+            var item = AppHandler.Instance.GetProfileItem(SelectedProfile.indexId);
             if (item is null)
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectServer);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectServer);
                 return;
             }
             eConfigType = item.configType;
@@ -466,7 +466,7 @@ namespace ServiceLib.ViewModels
             var exists = lstSelecteds.Exists(t => t.indexId == _config.indexId);
 
             ConfigHandler.RemoveServer(_config, lstSelecteds);
-            _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+            NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
 
             RefreshServers();
             if (exists)
@@ -475,15 +475,15 @@ namespace ServiceLib.ViewModels
             }
         }
 
-        private void RemoveDuplicateServer()
+        private async Task RemoveDuplicateServer()
         {
             var tuple = ConfigHandler.DedupServerList(_config, _config.subIndexId);
             RefreshServers();
             Reload();
-            _noticeHandler?.Enqueue(string.Format(ResUI.RemoveDuplicateServerResult, tuple.Item1, tuple.Item2));
+            NoticeHandler.Instance.Enqueue(string.Format(ResUI.RemoveDuplicateServerResult, tuple.Item1, tuple.Item2));
         }
 
-        private void CopyServer()
+        private async Task CopyServer()
         {
             if (GetProfileItems(out List<ProfileItem> lstSelecteds, false) < 0)
             {
@@ -492,11 +492,11 @@ namespace ServiceLib.ViewModels
             if (ConfigHandler.CopyServer(_config, lstSelecteds) == 0)
             {
                 RefreshServers();
-                _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
             }
         }
 
-        public void SetDefaultServer()
+        public async Task SetDefaultServer()
         {
             if (Utils.IsNullOrEmpty(SelectedProfile?.indexId))
             {
@@ -505,7 +505,7 @@ namespace ServiceLib.ViewModels
             SetDefaultServer(SelectedProfile.indexId);
         }
 
-        private void SetDefaultServer(string indexId)
+        private async Task SetDefaultServer(string indexId)
         {
             if (Utils.IsNullOrEmpty(indexId))
             {
@@ -515,10 +515,10 @@ namespace ServiceLib.ViewModels
             {
                 return;
             }
-            var item = LazyConfig.Instance.GetProfileItem(indexId);
+            var item = AppHandler.Instance.GetProfileItem(indexId);
             if (item is null)
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectServer);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectServer);
                 return;
             }
 
@@ -548,10 +548,10 @@ namespace ServiceLib.ViewModels
 
         public async Task ShareServerAsync()
         {
-            var item = LazyConfig.Instance.GetProfileItem(SelectedProfile.indexId);
+            var item = AppHandler.Instance.GetProfileItem(SelectedProfile.indexId);
             if (item is null)
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectServer);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectServer);
                 return;
             }
             var url = FmtHandler.GetShareUri(item);
@@ -563,7 +563,7 @@ namespace ServiceLib.ViewModels
             await _updateView?.Invoke(EViewAction.ShareServer, url);
         }
 
-        private void SetDefaultMultipleServer(ECoreType coreType)
+        private async Task SetDefaultMultipleServer(ECoreType coreType)
         {
             if (GetProfileItems(out List<ProfileItem> lstSelecteds, true) < 0)
             {
@@ -572,7 +572,7 @@ namespace ServiceLib.ViewModels
 
             if (ConfigHandler.AddCustomServer4Multiple(_config, lstSelecteds, coreType, out string indexId) != 0)
             {
-                _noticeHandler?.Enqueue(ResUI.OperationFailed);
+                NoticeHandler.Instance.Enqueue(ResUI.OperationFailed);
                 return;
             }
             if (indexId == _config.indexId)
@@ -586,7 +586,7 @@ namespace ServiceLib.ViewModels
             }
         }
 
-        public void SortServer(string colName)
+        public async Task SortServer(string colName)
         {
             if (Utils.IsNullOrEmpty(colName))
             {
@@ -617,19 +617,19 @@ namespace ServiceLib.ViewModels
             }
 
             ConfigHandler.MoveToGroup(_config, lstSelecteds, SelectedMoveToGroup.id);
-            _noticeHandler?.Enqueue(ResUI.OperationSuccess);
+            NoticeHandler.Instance.Enqueue(ResUI.OperationSuccess);
 
             RefreshServers();
             SelectedMoveToGroup = new();
             //Reload();
         }
 
-        public void MoveServer(EMove eMove)
+        public async Task MoveServer(EMove eMove)
         {
             var item = _lstProfile.FirstOrDefault(t => t.indexId == SelectedProfile.indexId);
             if (item is null)
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectServer);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectServer);
                 return;
             }
 
@@ -656,7 +656,7 @@ namespace ServiceLib.ViewModels
             }
         }
 
-        public void ServerSpeedtest(ESpeedActionType actionType)
+        public async Task ServerSpeedtest(ESpeedActionType actionType)
         {
             if (actionType == ESpeedActionType.Mixedtest)
             {
@@ -667,11 +667,8 @@ namespace ServiceLib.ViewModels
                 return;
             }
             //ClearTestResult();
-            var coreHandler = Locator.Current.GetService<CoreHandler>();
-            if (coreHandler != null)
-            {
-                _speedtestHandler = new SpeedtestHandler(_config, coreHandler, lstSelecteds, actionType, UpdateSpeedtestHandler);
-            }
+
+            _speedtestHandler = new SpeedtestService(_config, lstSelecteds, actionType, UpdateSpeedtestHandler);
         }
 
         public void ServerSpeedtestStop()
@@ -681,22 +678,22 @@ namespace ServiceLib.ViewModels
 
         private async Task Export2ClientConfigAsync(bool blClipboard)
         {
-            var item = LazyConfig.Instance.GetProfileItem(SelectedProfile.indexId);
+            var item = AppHandler.Instance.GetProfileItem(SelectedProfile.indexId);
             if (item is null)
             {
-                _noticeHandler?.Enqueue(ResUI.PleaseSelectServer);
+                NoticeHandler.Instance.Enqueue(ResUI.PleaseSelectServer);
                 return;
             }
             if (blClipboard)
             {
                 if (CoreConfigHandler.GenerateClientConfig(item, null, out string msg, out string content) != 0)
                 {
-                    Locator.Current.GetService<NoticeHandler>()?.Enqueue(msg);
+                    NoticeHandler.Instance.Enqueue(msg);
                 }
                 else
                 {
                     await _updateView?.Invoke(EViewAction.SetClipboardData, content);
-                    _noticeHandler?.SendMessage(ResUI.OperationSuccess);
+                    NoticeHandler.Instance.SendMessage(ResUI.OperationSuccess);
                 }
             }
             else
@@ -713,12 +710,12 @@ namespace ServiceLib.ViewModels
             }
             if (CoreConfigHandler.GenerateClientConfig(item, fileName, out string msg, out string content) != 0)
             {
-                Locator.Current.GetService<NoticeHandler>()?.Enqueue(msg);
+                NoticeHandler.Instance.Enqueue(msg);
             }
             else
             {
                 msg = string.Format(ResUI.SaveClientConfigurationIn, fileName);
-                Locator.Current.GetService<NoticeHandler>()?.SendMessageAndEnqueue(msg);
+                NoticeHandler.Instance.SendMessageAndEnqueue(msg);
             }
         }
 
@@ -750,7 +747,7 @@ namespace ServiceLib.ViewModels
                 {
                     await _updateView?.Invoke(EViewAction.SetClipboardData, sb.ToString());
                 }
-                _noticeHandler?.SendMessage(ResUI.BatchExportURLSuccessfully);
+                NoticeHandler.Instance.SendMessage(ResUI.BatchExportURLSuccessfully);
             }
         }
 
@@ -767,7 +764,7 @@ namespace ServiceLib.ViewModels
             }
             else
             {
-                item = LazyConfig.Instance.GetSubItem(_config.subIndexId);
+                item = AppHandler.Instance.GetSubItem(_config.subIndexId);
                 if (item is null)
                 {
                     return;

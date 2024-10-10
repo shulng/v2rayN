@@ -1,4 +1,6 @@
-﻿using System.Collections.Specialized;
+﻿using CliWrap;
+using CliWrap.Buffered;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
@@ -7,6 +9,7 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -109,7 +112,7 @@ namespace ServiceLib.Common
             catch (Exception ex)
             {
                 Logging.SaveLog(ex.Message, ex);
-                return new List<string>();
+                return [];
             }
         }
 
@@ -130,7 +133,7 @@ namespace ServiceLib.Common
             catch (Exception ex)
             {
                 Logging.SaveLog(ex.Message, ex);
-                return new List<string>();
+                return [];
             }
         }
 
@@ -639,29 +642,16 @@ namespace ServiceLib.Common
             return fileName;
         }
 
-        public static IPAddress? GetDefaultGateway()
-        {
-            return NetworkInterface
-                .GetAllNetworkInterfaces()
-                .Where(n => n.OperationalStatus == OperationalStatus.Up)
-                .Where(n => n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
-                .SelectMany(n => n.GetIPProperties()?.GatewayAddresses)
-                .Select(g => g?.Address)
-                .Where(a => a != null)
-                // .Where(a => a.AddressFamily == AddressFamily.InterNetwork)
-                // .Where(a => Array.FindIndex(a.GetAddressBytes(), b => b != 0) >= 0)
-                .FirstOrDefault();
-        }
-
         public static bool IsGuidByParse(string strSrc)
         {
-            return Guid.TryParse(strSrc, out Guid g);
+            return Guid.TryParse(strSrc, out _);
         }
 
-        public static void ProcessStart(string fileName, string arguments = "")
+        public static void ProcessStart(string? fileName, string arguments = "")
         {
             try
             {
+                if (fileName.IsNullOrEmpty()) { return; }
                 Process.Start(new ProcessStartInfo(fileName, arguments) { UseShellExecute = true });
             }
             catch (Exception ex)
@@ -701,23 +691,40 @@ namespace ServiceLib.Common
             return systemHosts;
         }
 
-        public static string GetExeName(string name)
+        public static async Task<string?> GetCliWrapOutput(string filePath, string? arg)
         {
-            if (IsWindows())
-            {
-                return $"{name}.exe";
-            }
-            else
-            {
-                return name;
-            }
+            return await GetCliWrapOutput(filePath, arg != null ? [arg] : null);
         }
 
-        public static bool IsWindows() => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
-        public static bool IsLinux() => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-
-        public static bool IsOSX() => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+        public static async Task<string?> GetCliWrapOutput(string filePath, IEnumerable<string>? args)
+        {
+            try
+            {
+                var cmd = Cli.Wrap(filePath);
+                if (args != null)
+                {
+                    if (args.Count() == 1)
+                    {
+                        cmd = cmd.WithArguments(args.First());
+                    }
+                    else
+                    {
+                        cmd = cmd.WithArguments(args);
+                    }
+                }
+                var result = await cmd.ExecuteBufferedAsync();
+                if (result.IsSuccess)
+                {
+                    return result.StandardOutput.ToString();
+                }
+                Logging.SaveLog(result.ToString() ?? "");
+            }
+            catch (Exception ex)
+            {
+                Logging.SaveLog("GetCliWrapOutput", ex);
+            }
+            return null;
+        }
 
         #endregion 杂项
 
@@ -743,7 +750,7 @@ namespace ServiceLib.Common
         /// <returns></returns>
         public static string GetExePath()
         {
-            return Environment.ProcessPath ?? string.Empty;
+            return Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule?.FileName ?? string.Empty;
         }
 
         public static string StartupPath()
@@ -864,5 +871,52 @@ namespace ServiceLib.Common
         }
 
         #endregion TempPath
+
+        #region Platform
+
+        public static bool IsWindows() => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+        public static bool IsLinux() => RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+
+        public static bool IsOSX() => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+
+        public static string GetExeName(string name)
+        {
+            if (IsWindows())
+            {
+                return $"{name}.exe";
+            }
+            else
+            {
+                return name;
+            }
+        }
+
+        public static bool IsAdministrator()
+        {
+            if (IsWindows())
+            {
+                return new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            else
+            {
+                var id = GetLinuxUserId().Result ?? "1000";
+                if (int.TryParse(id, out int userId))
+                {
+                    return userId == 0;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+
+        private static async Task<string?> GetLinuxUserId()
+        {
+            return await GetCliWrapOutput("/bin/bash", ["-c", "id -u"]);
+        }
+
+        #endregion Platform
     }
 }

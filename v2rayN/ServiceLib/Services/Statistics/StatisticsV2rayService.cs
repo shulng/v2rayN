@@ -2,20 +2,20 @@
 using Grpc.Net.Client;
 using ProtosLib.Statistics;
 
-namespace ServiceLib.Handler.Statistics
+namespace ServiceLib.Services.Statistics
 {
-    public class StatisticsV2ray
+    public class StatisticsV2rayService
     {
         private Models.Config _config;
         private GrpcChannel? _channel;
         private StatsService.StatsServiceClient? _client;
         private bool _exitFlag;
-        private Action<ServerSpeedItem> _updateFunc;
+        private Action<ServerSpeedItem>? _updateFunc;
 
-        public StatisticsV2ray(Models.Config config, Action<ServerSpeedItem> update)
+        public StatisticsV2rayService(Models.Config config, Action<ServerSpeedItem> updateFunc)
         {
             _config = config;
-            _updateFunc = update;
+            _updateFunc = updateFunc;
             _exitFlag = false;
 
             GrpcInit();
@@ -29,7 +29,7 @@ namespace ServiceLib.Handler.Statistics
             {
                 try
                 {
-                    _channel = GrpcChannel.ForAddress($"{Global.HttpProtocol}{Global.Loopback}:{LazyConfig.Instance.StatePort}");
+                    _channel = GrpcChannel.ForAddress($"{Global.HttpProtocol}{Global.Loopback}:{AppHandler.Instance.StatePort}");
                     _client = new StatsService.StatsServiceClient(_channel);
                 }
                 catch (Exception ex)
@@ -51,7 +51,7 @@ namespace ServiceLib.Handler.Statistics
                 await Task.Delay(1000);
                 try
                 {
-                    if (!(_config.IsRunningCore(ECoreType.Xray)))
+                    if (!_config.IsRunningCore(ECoreType.Xray))
                     {
                         continue;
                     }
@@ -70,7 +70,7 @@ namespace ServiceLib.Handler.Statistics
                         if (res != null)
                         {
                             ParseOutput(res.Stat, out ServerSpeedItem server);
-                            _updateFunc(server);
+                            _updateFunc?.Invoke(server);
                         }
                     }
                     if (_channel != null)
