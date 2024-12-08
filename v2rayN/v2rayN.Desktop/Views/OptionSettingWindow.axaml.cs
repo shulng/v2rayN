@@ -138,6 +138,7 @@ namespace v2rayN.Desktop.Views
                 this.Bind(ViewModel, vm => vm.SpeedTestTimeout, v => v.cmbSpeedTestTimeout.SelectedValue).DisposeWith(disposables);
                 this.Bind(ViewModel, vm => vm.SpeedTestUrl, v => v.cmbSpeedTestUrl.SelectedValue).DisposeWith(disposables);
                 this.Bind(ViewModel, vm => vm.SpeedPingTestUrl, v => v.cmbSpeedPingTestUrl.SelectedValue).DisposeWith(disposables);
+                this.Bind(ViewModel, vm => vm.SpeedTestPageSize, v => v.txtSpeedTestPageSize.Text).DisposeWith(disposables);
                 this.Bind(ViewModel, vm => vm.SubConvertUrl, v => v.cmbSubConvertUrl.SelectedValue).DisposeWith(disposables);
                 this.Bind(ViewModel, vm => vm.MainGirdOrientation, v => v.cmbMainGirdOrientation.SelectedIndex).DisposeWith(disposables);
                 this.Bind(ViewModel, vm => vm.GeoFileSourceUrl, v => v.cmbGetFilesSourceUrl.SelectedValue).DisposeWith(disposables);
@@ -165,9 +166,14 @@ namespace v2rayN.Desktop.Views
                 this.BindCommand(ViewModel, vm => vm.SaveCmd, v => v.btnSave).DisposeWith(disposables);
             });
 
-            if (!Utils.IsWindows())
+            if (Utils.IsWindows())
             {
-                tabSystemproxy.IsVisible = false;
+                txbSettingsExceptionTip2.IsVisible = false;
+            }
+            else
+            {
+                txbSettingsExceptionTip.IsVisible = false;
+                panSystemProxyAdvanced.IsVisible = false;
             }
 
             if (Utils.IsOSX())
