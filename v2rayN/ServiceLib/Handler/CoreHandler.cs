@@ -24,7 +24,7 @@ namespace ServiceLib.Handler
             Environment.SetEnvironmentVariable("V2RAY_LOCATION_ASSET", Utils.GetBinPath(""), EnvironmentVariableTarget.Process);
             Environment.SetEnvironmentVariable("XRAY_LOCATION_ASSET", Utils.GetBinPath(""), EnvironmentVariableTarget.Process);
 
-            if (Utils.IsLinux() || Utils.IsOSX())
+            if (Utils.IsNonWindows())
             {
                 var coreInfo = CoreInfoHandler.Instance.GetCoreInfo();
                 foreach (var it in coreInfo)
@@ -174,7 +174,7 @@ namespace ServiceLib.Handler
                 var itemSocks = await ConfigHandler.GetPreSocksItem(_config, node, coreType);
                 if (itemSocks != null)
                 {
-                    var preCoreType = _config.RunningCoreType = itemSocks.CoreType ?? ECoreType.sing_box;
+                    var preCoreType = itemSocks.CoreType ?? ECoreType.sing_box;
                     var fileName = Utils.GetConfigPath(Global.CorePreConfigFileName);
                     var result = await CoreConfigHandler.GenerateClientConfig(itemSocks, fileName);
                     if (result.Success)
@@ -221,7 +221,7 @@ namespace ServiceLib.Handler
         {
             return _config.TunModeItem.EnableTun
                    && eCoreType == ECoreType.sing_box
-                   && (Utils.IsLinux() || Utils.IsOSX())
+                   && (Utils.IsNonWindows())
                 //&& _config.TunModeItem.LinuxSudoPwd.IsNotEmpty()
                 ;
         }

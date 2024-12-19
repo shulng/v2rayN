@@ -122,7 +122,7 @@ namespace ServiceLib.Services.CoreConfig
                 singboxConfig.inbounds.Clear();
                 singboxConfig.outbounds.RemoveAt(0);
 
-                var httpPort = AppHandler.Instance.GetLocalPort(EInboundProtocol.speedtest);
+                var initPort = AppHandler.Instance.GetLocalPort(EInboundProtocol.speedtest);
 
                 foreach (var it in selecteds)
                 {
@@ -144,8 +144,8 @@ namespace ServiceLib.Services.CoreConfig
                     }
 
                     //find unused port
-                    var port = httpPort;
-                    for (int k = httpPort; k < Global.MaxPort; k++)
+                    var port = initPort;
+                    for (int k = initPort; k < Global.MaxPort; k++)
                     {
                         if (lstIpEndPoints?.FindIndex(_it => _it.Port == k) >= 0)
                         {
@@ -157,7 +157,7 @@ namespace ServiceLib.Services.CoreConfig
                         }
                         //found
                         port = k;
-                        httpPort = port + 1;
+                        initPort = port + 1;
                         break;
                     }
 
@@ -409,7 +409,9 @@ namespace ServiceLib.Services.CoreConfig
                     {
                         await GenInbounds(singboxConfig);
                         await GenExperimental(singboxConfig);
-                        JsonUtils.ToFile(singboxConfig, fileName, false);
+
+                        var content = JsonUtils.Serialize(singboxConfig, true);
+                        await File.WriteAllTextAsync(fileName, content);
                     }
                 }
                 else
@@ -440,7 +442,7 @@ namespace ServiceLib.Services.CoreConfig
 
         #region private gen function
 
-        public async Task<int> GenLog(SingboxConfig singboxConfig)
+        private async Task<int> GenLog(SingboxConfig singboxConfig)
         {
             try
             {
@@ -568,7 +570,7 @@ namespace ServiceLib.Services.CoreConfig
             return inbound;
         }
 
-        public async Task<int> GenOutbound(ProfileItem node, Outbound4Sbox outbound)
+        private async Task<int> GenOutbound(ProfileItem node, Outbound4Sbox outbound)
         {
             try
             {
@@ -692,7 +694,7 @@ namespace ServiceLib.Services.CoreConfig
             return 0;
         }
 
-        public async Task<int> GenOutboundMux(ProfileItem node, Outbound4Sbox outbound)
+        private async Task<int> GenOutboundMux(ProfileItem node, Outbound4Sbox outbound)
         {
             try
             {
@@ -715,7 +717,7 @@ namespace ServiceLib.Services.CoreConfig
             return 0;
         }
 
-        public async Task<int> GenOutboundTls(ProfileItem node, Outbound4Sbox outbound)
+        private async Task<int> GenOutboundTls(ProfileItem node, Outbound4Sbox outbound)
         {
             try
             {
@@ -765,7 +767,7 @@ namespace ServiceLib.Services.CoreConfig
             return 0;
         }
 
-        public async Task<int> GenOutboundTransport(ProfileItem node, Outbound4Sbox outbound)
+        private async Task<int> GenOutboundTransport(ProfileItem node, Outbound4Sbox outbound)
         {
             try
             {
@@ -992,7 +994,7 @@ namespace ServiceLib.Services.CoreConfig
             }
         }
 
-        public async Task<int> GenRoutingUserRule(RulesItem item, List<Rule4Sbox> rules)
+        private async Task<int> GenRoutingUserRule(RulesItem item, List<Rule4Sbox> rules)
         {
             try
             {
@@ -1150,7 +1152,7 @@ namespace ServiceLib.Services.CoreConfig
             return true;
         }
 
-        public async Task<int> GenDns(ProfileItem? node, SingboxConfig singboxConfig)
+        private async Task<int> GenDns(ProfileItem? node, SingboxConfig singboxConfig)
         {
             try
             {
@@ -1181,7 +1183,7 @@ namespace ServiceLib.Services.CoreConfig
             return 0;
         }
 
-        public async Task<int> GenDnsDomains(ProfileItem? node, SingboxConfig singboxConfig, DNSItem? dNSItem)
+        private async Task<int> GenDnsDomains(ProfileItem? node, SingboxConfig singboxConfig, DNSItem? dNSItem)
         {
             var dns4Sbox = singboxConfig.dns ?? new();
             dns4Sbox.servers ??= [];
@@ -1234,7 +1236,7 @@ namespace ServiceLib.Services.CoreConfig
             return 0;
         }
 
-        public async Task<int> GenExperimental(SingboxConfig singboxConfig)
+        private async Task<int> GenExperimental(SingboxConfig singboxConfig)
         {
             //if (_config.guiItem.enableStatistics)
             {

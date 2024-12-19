@@ -3059,6 +3059,15 @@ namespace ServiceLib.Resx {
         }
         
         /// <summary>
+        ///   查找类似 Exception. Do not use proxy server for addresses,with a comma (,) 的本地化字符串。
+        /// </summary>
+        public static string TbSettingsExceptionTip2 {
+            get {
+                return ResourceManager.GetString("TbSettingsExceptionTip2", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 Follow System Theme 的本地化字符串。
         /// </summary>
         public static string TbSettingsFollowSystemTheme {
@@ -3334,6 +3343,15 @@ namespace ServiceLib.Resx {
         public static string TbSettingsSpeedPingTestUrl {
             get {
                 return ResourceManager.GetString("TbSettingsSpeedPingTestUrl", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Number per time for auto batch during speedtest(max 1000) 的本地化字符串。
+        /// </summary>
+        public static string TbSettingsSpeedTestPageSize {
+            get {
+                return ResourceManager.GetString("TbSettingsSpeedTestPageSize", resourceCulture);
             }
         }
         

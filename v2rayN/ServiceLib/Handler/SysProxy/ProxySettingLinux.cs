@@ -2,9 +2,9 @@
 {
     public class ProxySettingLinux
     {
-        public static async Task SetProxy(string host, int port)
+        public static async Task SetProxy(string host, int port, string exceptions)
         {
-            var lstCmd = GetSetCmds(host, port);
+            var lstCmd = GetSetCmds(host, port, exceptions);
 
             await ExecCmd(lstCmd);
         }
@@ -29,7 +29,7 @@
             }
         }
 
-        private static List<CmdItem> GetSetCmds(string host, int port)
+        private static List<CmdItem> GetSetCmds(string host, int port, string exceptions)
         {
             var isKde = IsKde(out var configDir);
             List<string> lstType = ["", "http", "https", "socks", "ftp"];
@@ -41,12 +41,20 @@
                 {
                     lstCmd.AddRange(GetSetCmd4Kde(type, host, port, configDir));
                 }
+                if (exceptions.IsNotEmpty())
+                {
+                    lstCmd.AddRange(GetSetCmd4Kde("exceptions", exceptions, 0, configDir));
+                }
             }
             else
             {
                 foreach (var type in lstType)
                 {
                     lstCmd.AddRange(GetSetCmd4Gnome(type, host, port));
+                }
+                if (exceptions.IsNotEmpty())
+                {
+                    lstCmd.AddRange(GetSetCmd4Gnome("exceptions", exceptions, 0));
                 }
             }
             return lstCmd;
@@ -61,7 +69,7 @@
             {
                 lstCmd.Add(new CmdItem()
                 {
-                    Cmd = "kwriteconfig5",
+                    Cmd = GetKdeVersion(),
                     Arguments = ["--file", $"{configDir}/kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "0"]
                 });
             }
@@ -80,13 +88,22 @@
         private static List<CmdItem> GetSetCmd4Kde(string type, string host, int port, string configDir)
         {
             List<CmdItem> lstCmd = [];
+            var cmd = GetKdeVersion();
 
             if (type.IsNullOrEmpty())
             {
                 lstCmd.Add(new()
                 {
-                    Cmd = "kwriteconfig5",
+                    Cmd = cmd,
                     Arguments = ["--file", $"{configDir}/kioslaverc", "--group", "Proxy Settings", "--key", "ProxyType", "1"]
+                });
+            }
+            else if (type == "exceptions")
+            {
+                lstCmd.Add(new()
+                {
+                    Cmd = cmd,
+                    Arguments = ["--file", $"{configDir}/kioslaverc", "--group", "Proxy Settings", "--key", "NoProxyFor", host]
                 });
             }
             else
@@ -94,7 +111,7 @@
                 var type2 = type.Equals("https") ? "http" : type;
                 lstCmd.Add(new CmdItem()
                 {
-                    Cmd = "kwriteconfig5",
+                    Cmd = cmd,
                     Arguments = ["--file", $"{configDir}/kioslaverc", "--group", "Proxy Settings", "--key", $"{type}Proxy", $"{type2}://{host}:{port}"]
                 });
             }
@@ -112,6 +129,14 @@
                 {
                     Cmd = "gsettings",
                     Arguments = ["set", "org.gnome.system.proxy", "mode", "manual"]
+                });
+            }
+            else if (type == "exceptions")
+            {
+                lstCmd.Add(new()
+                {
+                    Cmd = "gsettings",
+                    Arguments = ["set", $"org.gnome.system.proxy", "ignore-hosts", JsonUtils.Serialize(host.Split(','), false)]
                 });
             }
             else
@@ -147,6 +172,15 @@
             }
 
             return isKde;
+        }
+        private static string GetKdeVersion()
+        {
+            var ver = Environment.GetEnvironmentVariable("KDE_SESSION_VERSION") ?? "0";
+            return ver switch
+            {
+                "6" => "kwriteconfig6",
+                _ => "kwriteconfig5"
+            };
         }
     }
 }
